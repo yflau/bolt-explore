@@ -29,6 +29,11 @@ type page struct {
 	ptr      uintptr
 }
 
+type bucket struct {
+	root     pgid   // page id of the bucket's root-level page
+	sequence uint64 // monotonically incrementing, used by NextSequence()
+}
+
 // PageInBufferDemo Open 内打开db文件(文件大小!=0)时读取第一个页的时候id=0, pageSize=0, 因此只是读取固定的4096个字节([0x1000]byte), 
 // 但其实一个page结构体仅占8+2+2+4+4=20字节，因此读取20也是可以的
 //
@@ -111,5 +116,24 @@ func FlockRace() error {
 
 	time.Sleep(4*time.Second)
 	return nil
+}
+
+// UnsafeDemo demonstate the unsafe usage
+// $mage unsafeDemo
+// [255 0 0 0 0 0 0 0 10 0 0 0 0 0 0 0 0 0 0 0]
+// [1 1 0 0 0 0 0 0 10 0 0 0 0 0 0 0 0 0 0 0]
+func UnsafeDemo() {
+	b := &bucket{
+		root: 255,
+		sequence: 10,
+	}
+	var value = make([]byte, 20)
+	// Write a bucket header.
+	var bucket = (*bucket)(unsafe.Pointer(&value[0]))
+	*bucket = *b
+	fmt.Println(value)
+	b.root = 257
+	*bucket = *b
+	fmt.Println(value)
 }
 
